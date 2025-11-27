@@ -1,0 +1,1094 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HDBank - Transaction SQL Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .input-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 25px;
+        }
+        
+        .input-section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .input-section h2::before {
+            content: "📝";
+            margin-right: 10px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            color: #555;
+            margin-bottom: 8px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+        
+        .btn-generate {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 10px;
+        }
+        
+        .btn-generate:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-generate:active {
+            transform: translateY(0);
+        }
+        
+        .output-section {
+            margin-top: 30px;
+        }
+        
+        .output-section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .output-section h2::before {
+            content: "⚡";
+            margin-right: 10px;
+        }
+        
+        .sql-block {
+            background: #2d2d2d;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            position: relative;
+        }
+        
+        .sql-block h3 {
+            color: #4fc3f7;
+            margin-bottom: 15px;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .sql-block pre {
+            color: #e0e0e0;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            overflow-x: auto;
+            margin: 0;
+        }
+        
+        .copy-btn {
+            background: #4fc3f7;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .copy-btn:hover {
+            background: #29b6f6;
+        }
+        
+        .copy-btn.copied {
+            background: #66bb6a;
+        }
+        
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            color: #1565c0;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 16px 24px;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            z-index: 9999;
+            animation: slideIn 0.3s ease-out;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 600;
+            min-width: 300px;
+        }
+        
+        .toast.success {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        }
+        
+        .toast.error {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        
+        .toast-icon {
+            font-size: 24px;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+        }
+        
+        /* Improve button hover effects */
+        .copy-btn {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .copy-btn::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+        
+        .copy-btn:active::after {
+            width: 300px;
+            height: 300px;
+        }
+        
+        /* Add quick stats section */
+        .stats-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        
+        .stat-item {
+            text-align: center;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+        
+        .stat-value {
+            font-size: 20px;
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body>
+    <!-- Toast Container -->
+    <div id="toastContainer"></div>
+    
+    <div class="container">
+        <div class="header">
+            <h1>🏦 HDBank - Transaction SQL Generator</h1>
+            <p>Tự động generate SQL queries cho giao dịch treo</p>
+        </div>
+        
+        <div class="content">
+            <!-- PENDING TRANSACTIONS TABLE SECTION -->
+            <div class="input-section">
+                <h2>📊 Danh sách giao dịch treo (Optional - Quick Load)</h2>
+                <div class="info-box">
+                    💡 Copy toàn bộ kết quả từ query "GIAO DỊCH TREO" và paste vào ô bên dưới, sau đó click vào dòng để tự động điền form
+                </div>
+                
+                <div class="form-group">
+                    <label for="pendingData">Paste dữ liệu giao dịch treo (tab-separated):</label>
+                    <textarea id="pendingData" rows="8" style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-family: 'Consolas', monospace; font-size: 12px;"></textarea>
+                </div>
+                
+                <button class="btn-generate" onclick="loadPendingTransactions()" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                    📥 Load Pending Transactions
+                </button>
+                
+                <div id="pendingTable" class="hidden" style="margin-top: 20px; overflow-x: auto;">
+                    <table id="transactionsTable" style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                        <thead style="background: #667eea; color: white;">
+                            <tr>
+                                <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">#</th>
+                                <th style="padding: 12px; border: 1px solid #ddd;">Status</th>
+                                <th style="padding: 12px; border: 1px solid #ddd;">Audit Number</th>
+                                <th style="padding: 12px; border: 1px solid #ddd;">Voucher</th>
+                                <th style="padding: 12px; border: 1px solid #ddd;">Account</th>
+                                <th style="padding: 12px; border: 1px solid #ddd;">Date</th>
+                                <th style="padding: 12px; border: 1px solid #ddd;">Amount</th>
+                                <th style="padding: 12px; border: 1px solid #ddd;">Teller ID</th>
+                                <th style="padding: 12px; border: 1px solid #ddd;">Type</th>
+                                <th style="padding: 12px; border: 1px solid #ddd;">Days</th>
+                                <th style="padding: 12px; border: 1px solid #ddd;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- MANUAL INPUT SECTION -->
+            <div class="input-section">
+                <h2>Nhập thông tin từ BƯỚC 1</h2>
+                <div class="info-box">
+                    💡 Copy kết quả từ query BƯỚC 1 và điền vào các ô bên dưới (hoặc chọn từ bảng trên)
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="audit_number">Audit Number *</label>
+                        <input type="text" id="audit_number" placeholder="VD: 1101120251127014775" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="voucher_no">Voucher No *</label>
+                        <input type="text" id="voucher_no" placeholder="VD: 57" required>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="acc_no_text">Account Number *</label>
+                        <input type="text" id="acc_no_text" placeholder="VD: 011704090002197" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="amount">Amount *</label>
+                        <input type="text" id="amount" placeholder="VD: 116310000" required>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="approve_date">Approve Date (DD/MM/YYYY) *</label>
+                        <input type="text" id="approve_date" placeholder="VD: 27/11/2025" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="teller_id">Teller ID (optional)</label>
+                        <input type="text" id="teller_id" placeholder="VD: NQ_HD001036">
+                    </div>
+                </div>
+                
+                <button class="btn-generate" onclick="generateSQL()">🚀 Generate SQL Queries</button>
+            </div>
+            
+            <div id="outputSection" class="output-section hidden">
+                <!-- Quick Stats -->
+                <div class="stats-box" id="statsBox">
+                    <div class="stat-item">
+                        <div class="stat-label">Audit Number</div>
+                        <div class="stat-value" id="statAudit">-</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Transaction Type</div>
+                        <div class="stat-value" id="statType">-</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Amount (VND)</div>
+                        <div class="stat-value" id="statAmount">-</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Account Number</div>
+                        <div class="stat-value" id="statAccount">-</div>
+                    </div>
+                </div>
+                
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 10px;">
+                    <h2 style="margin: 0;">Generated SQL Queries</h2>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="copy-btn" onclick="copyAllChecks(this)" style="padding: 10px 20px; font-size: 14px; background: #2196f3;">
+                            🔍 Copy All Checks
+                        </button>
+                        <button class="copy-btn" onclick="copyUpdateOnly(this)" style="padding: 10px 20px; font-size: 14px; background: #f44336;">
+                            ⚡ Copy UPDATE
+                        </button>
+                        <button class="copy-btn" onclick="copyAllSQL(this)" style="padding: 10px 20px; font-size: 14px; background: #4caf50;">
+                            📋 Copy ALL
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="sql-block">
+                    <h3>
+                        🔍 Kiểm tra Core Banking MỚI (Transaction DB)
+                        <button class="copy-btn" onclick="copySQL('sql1', this)">Copy</button>
+                    </h3>
+                    <pre id="sql1"></pre>
+                </div>
+                
+                <div class="sql-block">
+                    <h3>
+                        🔍 Kiểm tra Core Banking CŨ (EOC) - Cách 1
+                        <button class="copy-btn" onclick="copySQL('sql2', this)">Copy</button>
+                    </h3>
+                    <pre id="sql2"></pre>
+                </div>
+                
+                <div class="sql-block">
+                    <h3>
+                        🔍 Kiểm tra Core Banking CŨ (EOC) - Cách 2
+                        <button class="copy-btn" onclick="copySQL('sql3', this)">Copy</button>
+                    </h3>
+                    <pre id="sql3"></pre>
+                </div>
+                
+                <div class="sql-block">
+                    <h3>
+                        🔍 Kiểm tra Workflow
+                        <button class="copy-btn" onclick="copySQL('sql4', this)">Copy</button>
+                    </h3>
+                    <pre id="sql4"></pre>
+                </div>
+                
+                <div class="sql-block" id="fundBlock">
+                    <h3>
+                        💰 Kiểm tra Quỹ (nếu có Teller ID)
+                        <button class="copy-btn" onclick="copySQL('sql5', this)">Copy</button>
+                    </h3>
+                    <pre id="sql5"></pre>
+                </div>
+                
+                <div class="sql-block">
+                    <h3>
+                        📋 Kiểm tra Pending Tasks
+                        <button class="copy-btn" onclick="copySQL('sql6', this)">Copy</button>
+                    </h3>
+                    <pre id="sql6"></pre>
+                </div>
+                
+                <div class="sql-block">
+                    <h3>
+                        ✏️ UPDATE - Chuyển trạng thái H → R
+                        <button class="copy-btn" onclick="copySQL('sql7', this)">Copy</button>
+                    </h3>
+                    <pre id="sql7"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let pendingTransactions = [];
+        let selectedRowIndex = -1; // Track selected row
+        
+        // Toast notification function
+        function showToast(message, type = 'success', icon = '✓') {
+            const toastContainer = document.getElementById('toastContainer');
+            
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `
+                <div class="toast-icon">${icon}</div>
+                <div>${message}</div>
+            `;
+            
+            toastContainer.appendChild(toast);
+            
+            // Auto remove after 3 seconds
+            setTimeout(() => {
+                toast.style.animation = 'slideOut 0.3s ease-out';
+                setTimeout(() => {
+                    toastContainer.removeChild(toast);
+                }, 300);
+            }, 3000);
+        }
+        
+        function loadPendingTransactions() {
+            const data = document.getElementById('pendingData').value.trim();
+            
+            if (!data) {
+                showToast('Vui lòng paste dữ liệu giao dịch treo', 'error', '⚠️');
+                return;
+            }
+            
+            // Parse tab-separated data
+            const lines = data.split('\n').filter(line => line.trim());
+            pendingTransactions = [];
+            
+            lines.forEach(line => {
+                const cols = line.split('\t');
+                if (cols.length >= 14) {  // Query returns 14 columns
+                    // Parse the data according to the query columns
+                    const transaction = {
+                        status: cols[0] || '',
+                        approve_status: cols[1] || '',
+                        audit_number: cols[2] || '',
+                        voucher_no: cols[3] || '',
+                        acc_no_text: cols[4] || '',
+                        approve_date: cols[5] || '',
+                        amount: cols[6] || '',
+                        approve_by: cols[7] || '',
+                        teller_id: cols[8] || '',
+                        trans_type: cols[9] || '',
+                        branch_code_id: cols[10] || '',
+                        created_time: cols[11] || '',
+                        days_pending: cols[12] || '',
+                        hours_in_day: cols[13] || ''
+                    };
+                    pendingTransactions.push(transaction);
+                }
+            });
+            
+            if (pendingTransactions.length === 0) {
+                showToast('Không tìm thấy dữ liệu hợp lệ (cần 14 cột)', 'error', '❌');
+                return;
+            }
+            
+            // Render table
+            renderPendingTable();
+            document.getElementById('pendingTable').classList.remove('hidden');
+            
+            showToast(`Đã load ${pendingTransactions.length} giao dịch treo`, 'success', '📊');
+            
+            // Scroll to table
+            document.getElementById('pendingTable').scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        function renderPendingTable() {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+            
+            pendingTransactions.forEach((txn, index) => {
+                const row = document.createElement('tr');
+                row.id = `row-${index}`;
+                row.style.cursor = 'pointer';
+                row.style.transition = 'all 0.3s';
+                
+                // Check if this is the selected row
+                if (index === selectedRowIndex) {
+                    row.style.backgroundColor = '#e3f2fd';
+                    row.style.borderLeft = '4px solid #2196f3';
+                    row.style.fontWeight = '600';
+                }
+                
+                row.onmouseover = () => {
+                    if (index !== selectedRowIndex) {
+                        row.style.backgroundColor = '#f5f5f5';
+                    }
+                };
+                row.onmouseout = () => {
+                    if (index !== selectedRowIndex) {
+                        row.style.backgroundColor = 'white';
+                    } else {
+                        row.style.backgroundColor = '#e3f2fd';
+                    }
+                };
+                
+                // Parse date from approve_date for display
+                let displayDate = txn.approve_date;
+                if (txn.approve_date) {
+                    try {
+                        // If format is "YYYY-MM-DD HH:MM:SS.ms"
+                        const datePart = txn.approve_date.split(' ')[0];
+                        const parts = datePart.split('-');
+                        if (parts.length === 3) {
+                            displayDate = `${parts[2]}/${parts[1]}/${parts[0]}`;
+                        }
+                    } catch (e) {
+                        // Keep original if parsing fails
+                    }
+                }
+                
+                // Format amount
+                const formattedAmount = parseFloat(txn.amount.replace(/,/g, '')).toLocaleString('vi-VN');
+                
+                row.innerHTML = `
+                    <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">${index + 1}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">
+                        <span style="background: ${txn.approve_status === 'H' ? '#ff5252' : '#4caf50'}; color: white; padding: 4px 8px; border-radius: 4px; font-weight: 600;">
+                            ${txn.approve_status}
+                        </span>
+                    </td>
+                    <td style="padding: 10px; border: 1px solid #ddd; font-family: monospace;">${txn.audit_number}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">${txn.voucher_no}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd; font-family: monospace;">${txn.acc_no_text}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">${displayDate}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd; text-align: right;">${formattedAmount}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">${txn.teller_id}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">
+                        <span style="background: ${txn.trans_type === 'CASD' ? '#2196f3' : '#ff9800'}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;">
+                            ${txn.trans_type}
+                        </span>
+                    </td>
+                    <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">
+                        <span style="background: ${txn.days_pending > 1 ? '#ff5252' : '#ffc107'}; color: white; padding: 4px 8px; border-radius: 4px; font-weight: 600;">
+                            ${txn.days_pending}d
+                        </span>
+                    </td>
+                    <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">
+                        <button onclick="selectTransaction(${index}); event.stopPropagation();" 
+                                style="background: ${index === selectedRowIndex ? '#1976d2' : '#667eea'}; color: white; border: none; padding: 6px 12px; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: 600;">
+                            ${index === selectedRowIndex ? '✓ Selected' : 'Select'}
+                        </button>
+                    </td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+        }
+        
+        function selectTransaction(index) {
+            const txn = pendingTransactions[index];
+            
+            // Update selected row index
+            selectedRowIndex = index;
+            
+            // Re-render table to show highlight
+            renderPendingTable();
+            
+            // Fill form with transaction data
+            document.getElementById('audit_number').value = txn.audit_number;
+            document.getElementById('voucher_no').value = txn.voucher_no;
+            document.getElementById('acc_no_text').value = txn.acc_no_text;
+            
+            // Clean amount (remove decimals and formatting)
+            const cleanAmount = txn.amount.split('.')[0].replace(/,/g, '');
+            document.getElementById('amount').value = cleanAmount;
+            
+            // Parse and format date
+            let formattedDate = txn.approve_date;
+            if (txn.approve_date) {
+                try {
+                    const datePart = txn.approve_date.split(' ')[0];
+                    const parts = datePart.split('-');
+                    if (parts.length === 3) {
+                        formattedDate = `${parts[2]}/${parts[1]}/${parts[0]}`;
+                    }
+                } catch (e) {
+                    // Keep original
+                }
+            }
+            document.getElementById('approve_date').value = formattedDate;
+            
+            document.getElementById('teller_id').value = txn.teller_id;
+            
+            showToast(`Đã chọn giao dịch: ${txn.audit_number}`, 'success', '✓');
+            
+            // Scroll to form
+            document.querySelector('.input-section:nth-of-type(2)').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            
+            // Highlight the form briefly
+            const formSection = document.querySelector('.input-section:nth-of-type(2)');
+            formSection.style.boxShadow = '0 0 20px rgba(102, 126, 234, 0.5)';
+            setTimeout(() => {
+                formSection.style.boxShadow = '';
+            }, 1000);
+        }
+        
+        function generateSQL() {
+            // Get input values
+            const auditNumber = document.getElementById('audit_number').value.trim();
+            const voucherNo = document.getElementById('voucher_no').value.trim();
+            const accNoText = document.getElementById('acc_no_text').value.trim();
+            const amount = document.getElementById('amount').value.trim().replace(/,/g, '');
+            const approveDate = document.getElementById('approve_date').value.trim();
+            const tellerId = document.getElementById('teller_id').value.trim();
+            
+            // Validate required fields
+            if (!auditNumber || !voucherNo || !accNoText || !amount || !approveDate) {
+                showToast('Vui lòng điền đầy đủ các trường bắt buộc (*)', 'error', '⚠️');
+                return;
+            }
+            
+            // Update stats box
+            document.getElementById('statAudit').textContent = auditNumber;
+            
+            // Detect transaction type from account or set default
+            let transType = 'N/A';
+            if (accNoText) {
+                // You can add logic here to detect CASD/CASW based on account patterns
+                transType = 'Check SQL';
+            }
+            document.getElementById('statType').textContent = transType;
+            
+            document.getElementById('statAmount').textContent = parseFloat(amount).toLocaleString('vi-VN');
+            document.getElementById('statAccount').textContent = accNoText;
+            
+            // SQL 1: Core Banking MỚI
+            const sql1 = `-- Kiểm tra giao dịch trong Core Banking mới DB TRANSACTION
+SELECT
+    a.reference,           -- Mã tham chiếu (audit_number)
+    a.voucher_no,
+    a.account_no,          -- Số tài khoản
+    a.tran_date,           -- Ngày giao dịch
+    a.tran_amt,            -- Số tiền
+    a.tran_type,           -- Loại giao dịch
+    a.cr_dr_maint_ind,
+    a.*
+FROM transaction.rb_tran_hist a
+WHERE a.account_no = '${accNoText}'        -- ⭐ Từ BƯỚC 1: acc_no_text
+  AND a.reference = '${auditNumber}';      -- ⭐ Từ BƯỚC 1: audit_number`;
+            
+            // SQL 2: Core Banking CŨ - Cách 1
+            const sql2 = `-- Kiểm tra giao dịch trong Core Banking CŨ EOC - Cách 01
+SELECT a.VOUCHER_NO, a.*
+FROM EOC.RB_TRAN_HIST a
+WHERE a.INTERNAL_KEY = (
+    SELECT internal_key
+    FROM eoc.rb_acct
+    WHERE acct_no = '${accNoText}'         -- ⭐ Từ BƯỚC 1: acc_no_text
+)
+AND a.TRAN_AMT = ${amount}                 -- ⭐ Từ BƯỚC 1: amount
+AND a.TRAN_DATE = TO_DATE('${approveDate}', 'DD/MM/YYYY')
+AND a.VOUCHER_NO = '${voucherNo}';         -- ⭐ Từ BƯỚC 1: voucher_no`;
+            
+            // SQL 3: Core Banking CŨ - Cách 2
+            const sql3 = `-- Kiểm tra giao dịch trong Core Banking CŨ EOC - Cách 02
+SELECT a.VOUCHER_NO, a.*
+FROM EOC.RB_TRAN_HIST a
+INNER JOIN EOC.RB_ACCT b ON a.INTERNAL_KEY = b.INTERNAL_KEY
+WHERE b.ACCT_NO = '${accNoText}'           -- ⭐ Từ BƯỚC 1: acc_no_text
+  AND a.TRAN_AMT = ${amount}               -- ⭐ Từ BƯỚC 1: amount
+  AND a.TRAN_DATE = TO_DATE('${approveDate}', 'DD/MM/YYYY')
+  AND a.VOUCHER_NO = '${voucherNo}';       -- ⭐ Từ BƯỚC 1: voucher_no`;
+            
+            // SQL 4: Workflow
+            const sql4 = `-- Kiểm tra Workflow
+SELECT
+    pt.teller_id, 
+    wf.teller_id, 
+    wf.*
+FROM sys_work_flow wf
+INNER JOIN sys_pending_tasks pt ON wf.pending_tasks_id = pt.auto_id
+WHERE pt.identifier_key IN ('${auditNumber}')
+  AND wf.approve_status <> 'N'
+ORDER BY approved_date DESC;`;
+            
+            // SQL 5: Quỹ (if teller_id provided)
+            let sql5 = '';
+            if (tellerId) {
+                sql5 = `-- Kiểm tra tồn quỹ
+SELECT
+    auto_id,           -- ⭐ GHI LẠI
+    parvalue,
+    valid_amount,
+    valid_num,
+    teller_id
+FROM cm_fund_parvalue
+WHERE teller_id = '${tellerId}'            -- ⭐ Từ BƯỚC 1: teller_id
+  AND currency_id = '704'
+ORDER BY parvalue DESC;`;
+                document.getElementById('fundBlock').classList.remove('hidden');
+            } else {
+                sql5 = '-- Không có Teller ID, bỏ qua bước kiểm tra quỹ';
+                document.getElementById('fundBlock').classList.add('hidden');
+            }
+            
+            // SQL 6: Pending Tasks
+            const sql6 = `-- Kiểm tra Pending Tasks
+SELECT 
+    appr_status, 
+    appr_date, 
+    a.* 
+FROM sys_pending_tasks a
+WHERE identifier_key IN ('${auditNumber}');`;
+            
+            // SQL 7: UPDATE
+            const sql7 = `-- UPDATE: Chuyển trạng thái từ H → R
+-- ⚠️ THẬN TRỌNG: Chỉ chạy sau khi đã kiểm tra kỹ!
+
+UPDATE dep_transaction 
+SET approve_status = 'R', 
+    approve_by = 'SYSTEM' 
+WHERE audit_number = '${auditNumber}';
+
+UPDATE sys_pending_tasks 
+SET appr_status = 'R' 
+WHERE identifier_key = '${auditNumber}';`;
+            
+            // Display results
+            document.getElementById('sql1').textContent = sql1;
+            document.getElementById('sql2').textContent = sql2;
+            document.getElementById('sql3').textContent = sql3;
+            document.getElementById('sql4').textContent = sql4;
+            document.getElementById('sql5').textContent = sql5;
+            document.getElementById('sql6').textContent = sql6;
+            document.getElementById('sql7').textContent = sql7;
+            
+            // Show output section
+            document.getElementById('outputSection').classList.remove('hidden');
+            
+            showToast('✓ SQL queries đã được generate thành công!', 'success', '🚀');
+            
+            // Scroll to output
+            document.getElementById('outputSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        
+        function copyAllSQL() {
+            const sql1 = document.getElementById('sql1').textContent;
+            const sql2 = document.getElementById('sql2').textContent;
+            const sql3 = document.getElementById('sql3').textContent;
+            const sql4 = document.getElementById('sql4').textContent;
+            const sql5 = document.getElementById('sql5').textContent;
+            const sql6 = document.getElementById('sql6').textContent;
+            const sql7 = document.getElementById('sql7').textContent;
+            
+            // Combine all SQL with separators
+            const allSQL = `-- ========================================================================
+-- AUTO-GENERATED SQL QUERIES FOR PENDING TRANSACTION
+-- ========================================================================
+
+${sql1}
+
+-- ========================================================================
+
+${sql2}
+
+-- ========================================================================
+
+${sql3}
+
+-- ========================================================================
+
+${sql4}
+
+-- ========================================================================
+
+${sql5}
+
+-- ========================================================================
+
+${sql6}
+
+-- ========================================================================
+
+${sql7}
+
+-- ========================================================================
+-- END OF GENERATED QUERIES
+-- ========================================================================`;
+            
+            const btn = event.target;
+            
+            navigator.clipboard.writeText(allSQL).then(() => {
+                const originalText = btn.textContent;
+                const originalColor = btn.style.background;
+                btn.textContent = '✓ All Copied!';
+                btn.style.background = '#66bb6a';
+                
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.background = originalColor;
+                }, 2000);
+            }).catch(err => {
+                alert('Không thể copy. Vui lòng copy thủ công.');
+            });
+        }
+        
+        function copySQL(elementId, btnElement) {
+            const sqlText = document.getElementById(elementId).textContent;
+            
+            navigator.clipboard.writeText(sqlText).then(() => {
+                const originalText = btnElement.textContent;
+                btnElement.textContent = '✓ Copied!';
+                btnElement.classList.add('copied');
+                
+                showToast('SQL đã được copy vào clipboard', 'success', '📋');
+                
+                setTimeout(() => {
+                    btnElement.textContent = originalText;
+                    btnElement.classList.remove('copied');
+                }, 2000);
+            }).catch(err => {
+                showToast('Không thể copy. Vui lòng copy thủ công.', 'error', '❌');
+            });
+        }
+        
+        function copyAllSQL(btnElement) {
+            // Combine all SQL queries
+            const allSQL = [
+                '-- ================================================',
+                '-- GENERATED SQL QUERIES FOR TRANSACTION INVESTIGATION',
+                '-- Audit Number: ' + document.getElementById('audit_number').value,
+                '-- Generated at: ' + new Date().toLocaleString('vi-VN'),
+                '-- ================================================',
+                '',
+                document.getElementById('sql1').textContent,
+                '',
+                '-- ================================================',
+                '',
+                document.getElementById('sql2').textContent,
+                '',
+                '-- ================================================',
+                '',
+                document.getElementById('sql3').textContent,
+                '',
+                '-- ================================================',
+                '',
+                document.getElementById('sql4').textContent,
+                '',
+                '-- ================================================',
+                ''
+            ];
+            
+            // Add fund check if exists
+            const fundSQL = document.getElementById('sql5').textContent;
+            if (fundSQL && !fundSQL.includes('Không có Teller ID')) {
+                allSQL.push(fundSQL);
+                allSQL.push('');
+                allSQL.push('-- ================================================');
+                allSQL.push('');
+            }
+            
+            allSQL.push(document.getElementById('sql6').textContent);
+            allSQL.push('');
+            allSQL.push('-- ================================================');
+            allSQL.push('');
+            allSQL.push(document.getElementById('sql7').textContent);
+            
+            const combinedSQL = allSQL.join('\n');
+            
+            navigator.clipboard.writeText(combinedSQL).then(() => {
+                const originalText = btnElement.textContent;
+                btnElement.textContent = '✓ Copied All!';
+                btnElement.style.background = '#66bb6a';
+                
+                showToast('Đã copy toàn bộ SQL queries vào clipboard', 'success', '📋');
+                
+                setTimeout(() => {
+                    btnElement.textContent = originalText;
+                    btnElement.style.background = '#4caf50';
+                }, 2000);
+            }).catch(err => {
+                showToast('Không thể copy. Vui lòng copy thủ công.', 'error', '❌');
+            });
+        }
+        
+        function copyAllChecks(btnElement) {
+            // Only copy check queries (sql1-sql6), exclude UPDATE
+            const checkSQL = [
+                '-- ================================================',
+                '-- KIỂM TRA GIAO DỊCH TREO - CHECK QUERIES ONLY',
+                '-- Audit Number: ' + document.getElementById('audit_number').value,
+                '-- Generated at: ' + new Date().toLocaleString('vi-VN'),
+                '-- ================================================',
+                '',
+                document.getElementById('sql1').textContent,
+                '',
+                '-- ================================================',
+                '',
+                document.getElementById('sql2').textContent,
+                '',
+                '-- ================================================',
+                '',
+                document.getElementById('sql3').textContent,
+                '',
+                '-- ================================================',
+                '',
+                document.getElementById('sql4').textContent,
+                '',
+                '-- ================================================',
+                ''
+            ];
+            
+            // Add fund check if exists
+            const fundSQL = document.getElementById('sql5').textContent;
+            if (fundSQL && !fundSQL.includes('Không có Teller ID')) {
+                checkSQL.push(fundSQL);
+                checkSQL.push('');
+                checkSQL.push('-- ================================================');
+                checkSQL.push('');
+            }
+            
+            checkSQL.push(document.getElementById('sql6').textContent);
+            
+            const combinedSQL = checkSQL.join('\n');
+            
+            navigator.clipboard.writeText(combinedSQL).then(() => {
+                const originalText = btnElement.textContent;
+                btnElement.textContent = '✓ Copied Checks!';
+                btnElement.style.background = '#1976d2';
+                
+                showToast('Đã copy tất cả queries kiểm tra (không có UPDATE)', 'success', '🔍');
+                
+                setTimeout(() => {
+                    btnElement.textContent = originalText;
+                    btnElement.style.background = '#2196f3';
+                }, 2000);
+            }).catch(err => {
+                showToast('Không thể copy. Vui lòng copy thủ công.', 'error', '❌');
+            });
+        }
+        
+        function copyUpdateOnly(btnElement) {
+            // Only copy UPDATE statements
+            const updateSQL = [
+                '-- ================================================',
+                '-- UPDATE STATEMENTS - CHUYỂN TRẠNG THÁI H → R',
+                '-- Audit Number: ' + document.getElementById('audit_number').value,
+                '-- ⚠️ THẬN TRỌNG: Chỉ chạy sau khi đã kiểm tra kỹ!',
+                '-- Generated at: ' + new Date().toLocaleString('vi-VN'),
+                '-- ================================================',
+                '',
+                document.getElementById('sql7').textContent
+            ].join('\n');
+            
+            navigator.clipboard.writeText(updateSQL).then(() => {
+                const originalText = btnElement.textContent;
+                btnElement.textContent = '✓ Copied UPDATE!';
+                btnElement.style.background = '#d32f2f';
+                
+                showToast('⚠️ Đã copy UPDATE statements. Thận trọng khi chạy!', 'error', '⚡');
+                
+                setTimeout(() => {
+                    btnElement.textContent = originalText;
+                    btnElement.style.background = '#f44336';
+                }, 2000);
+            }).catch(err => {
+                showToast('Không thể copy. Vui lòng copy thủ công.', 'error', '❌');
+            });
+        }
+        
+        // Auto-format amount input
+        document.getElementById('amount').addEventListener('input', function(e) {
+            let value = e.target.value.replace(/[^\d]/g, '');
+            e.target.value = value;
+        });
+        
+        // Auto-format date input
+        document.getElementById('approve_date').addEventListener('blur', function(e) {
+            let value = e.target.value.trim();
+            // Try to parse and format date
+            if (value.includes('-')) {
+                // If format is YYYY-MM-DD, convert to DD/MM/YYYY
+                const parts = value.split('-');
+                if (parts.length === 3) {
+                    e.target.value = `${parts[2]}/${parts[1]}/${parts[0]}`;
+                }
+            }
+        });
+    </script>
+</body>
+</html>
