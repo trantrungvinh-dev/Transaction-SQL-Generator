@@ -336,6 +336,21 @@
                 </button>
                 
                 <div id="pendingTable" class="hidden" style="margin-top: 20px; overflow-x: auto;">
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 2px solid #e0e0e0;">
+                        <label style="font-weight: 600; color: #333; margin-bottom: 10px; display: block;">
+                            ⚙️ Default click behavior (có thể dùng cả 2 nút bất kỳ lúc nào):
+                        </label>
+                        <div style="display: flex; gap: 20px; align-items: center;">
+                            <label style="display: flex; align-items: center; cursor: pointer; font-size: 14px;">
+                                <input type="radio" name="defaultBehavior" value="view" style="margin-right: 8px; width: 18px; height: 18px; cursor: pointer;">
+                                <span>👁️ Quick View (chỉ fill form, không generate)</span>
+                            </label>
+                            <label style="display: flex; align-items: center; cursor: pointer; font-size: 14px;">
+                                <input type="radio" name="defaultBehavior" value="generate" checked style="margin-right: 8px; width: 18px; height: 18px; cursor: pointer;">
+                                <span>⚡ Auto Generate (fill form + generate SQL luôn)</span>
+                            </label>
+                        </div>
+                    </div>
                     <table id="transactionsTable" style="width: 100%; border-collapse: collapse; font-size: 13px;">
                         <thead style="background: #667eea; color: white;">
                             <tr>
@@ -349,7 +364,7 @@
                                 <th style="padding: 12px; border: 1px solid #ddd;">Teller ID</th>
                                 <th style="padding: 12px; border: 1px solid #ddd;">Type</th>
                                 <th style="padding: 12px; border: 1px solid #ddd;">Days</th>
-                                <th style="padding: 12px; border: 1px solid #ddd;">Action</th>
+                                <th style="padding: 12px; border: 1px solid #ddd; min-width: 180px;">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="tableBody">
@@ -615,12 +630,18 @@
             // Auto-select if only 1 transaction
             if (pendingTransactions.length === 1) {
                 setTimeout(() => {
-                    selectTransaction(0);
-                    showToast('Tự động chọn giao dịch duy nhất. Click "Generate" để tạo SQL!', 'success', '🎯');
+                    const defaultBehavior = document.querySelector('input[name="defaultBehavior"]:checked')?.value || 'generate';
+                    if (defaultBehavior === 'generate') {
+                        generateFromTransaction(0);
+                        showToast('Tự động generate SQL cho giao dịch duy nhất!', 'success', '🎯');
+                    } else {
+                        quickViewTransaction(0);
+                        showToast('Tự động chọn giao dịch duy nhất. Click "Generate" nếu cần SQL!', 'success', '🎯');
+                    }
                 }, 500);
             } else {
                 // Scroll to table if multiple transactions
-                showToast(`Có ${pendingTransactions.length} giao dịch. Vui lòng chọn giao dịch cần kiểm tra.`, 'success', '📋');
+                showToast(`Có ${pendingTransactions.length} giao dịch. Chọn "View" để xem hoặc "Gen" để generate SQL ngay.`, 'success', '📋');
                 document.getElementById('pendingTable').scrollIntoView({ behavior: 'smooth' });
             }
         }
@@ -696,11 +717,17 @@
                             ${txn.days_pending}d
                         </span>
                     </td>
-                    <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">
-                        <button onclick="selectTransaction(${index}); event.stopPropagation();" 
-                                style="background: ${index === selectedRowIndex ? '#1976d2' : '#667eea'}; color: white; border: none; padding: 6px 12px; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: 600;">
-                            ${index === selectedRowIndex ? '✓ Selected' : 'Select'}
-                        </button>
+                    <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">
+                        <div style="display: flex; gap: 5px; justify-content: center; flex-wrap: wrap;">
+                            <button onclick="quickViewTransaction(${index}); event.stopPropagation();" 
+                                    style="background: ${index === selectedRowIndex ? '#0288d1' : '#03a9f4'}; color: white; border: none; padding: 6px 10px; border-radius: 5px; cursor: pointer; font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 4px; white-space: nowrap;">
+                                👁️ View
+                            </button>
+                            <button onclick="generateFromTransaction(${index}); event.stopPropagation();" 
+                                    style="background: ${index === selectedRowIndex ? '#f57c00' : '#ff9800'}; color: white; border: none; padding: 6px 10px; border-radius: 5px; cursor: pointer; font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 4px; white-space: nowrap;">
+                                ⚡ Gen
+                            </button>
+                        </div>
                     </td>
                 `;
                 
@@ -708,7 +735,8 @@
             });
         }
         
-        function selectTransaction(index) {
+        // Quick View - Only fill form without generating SQL
+        function quickViewTransaction(index) {
             const txn = pendingTransactions[index];
             
             // Update selected row index
@@ -717,13 +745,48 @@
             // Re-render table to show highlight
             renderPendingTable();
             
-            // Hide any existing generated SQL (force user to regenerate)
-            if (document.getElementById('outputSection').classList.contains('hidden') === false) {
-                resetOutput();
-                showToast('Đã reset SQL cũ. Vui lòng click "Generate" để tạo SQL mới!', 'success', '🔄');
-            }
+            // Fill form with transaction data (same as selectTransaction but no SQL generation)
+            fillFormWithTransaction(txn);
             
-            // Fill form with transaction data
+            // Show form status indicator
+            document.getElementById('formStatusIndicator').classList.remove('hidden');
+            
+            showToast(`👁️ Quick View: ${txn.audit_number}`, 'success', '📋');
+            
+            // Scroll to form
+            document.querySelector('.input-section:nth-of-type(2)').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            
+            // Highlight the form briefly
+            const formSection = document.querySelector('.input-section:nth-of-type(2)');
+            formSection.style.boxShadow = '0 0 20px rgba(102, 126, 234, 0.5)';
+            setTimeout(() => {
+                formSection.style.boxShadow = '';
+            }, 1000);
+        }
+        
+        // Generate SQL - Fill form and auto-generate SQL
+        function generateFromTransaction(index) {
+            const txn = pendingTransactions[index];
+            
+            // Update selected row index
+            selectedRowIndex = index;
+            
+            // Re-render table to show highlight
+            renderPendingTable();
+            
+            // Fill form
+            fillFormWithTransaction(txn);
+            
+            showToast(`⚡ Generating SQL for: ${txn.audit_number}`, 'success', '🚀');
+            
+            // Auto-generate SQL after a short delay
+            setTimeout(() => {
+                generateSQL();
+            }, 300);
+        }
+        
+        // Helper function to fill form with transaction data
+        function fillFormWithTransaction(txn) {
             document.getElementById('audit_number').value = txn.audit_number;
             document.getElementById('voucher_no').value = txn.voucher_no;
             document.getElementById('acc_no_text').value = txn.acc_no_text;
@@ -748,21 +811,17 @@
             document.getElementById('approve_date').value = formattedDate;
             
             document.getElementById('teller_id').value = txn.teller_id;
+        }
+        
+        function selectTransaction(index) {
+            // Get default behavior from radio buttons
+            const defaultBehavior = document.querySelector('input[name="defaultBehavior"]:checked')?.value || 'generate';
             
-            // Show form status indicator
-            document.getElementById('formStatusIndicator').classList.remove('hidden');
-            
-            showToast(`Đã chọn giao dịch: ${txn.audit_number}`, 'success', '✓');
-            
-            // Scroll to form
-            document.querySelector('.input-section:nth-of-type(2)').scrollIntoView({ behavior: 'smooth', block: 'start' });
-            
-            // Highlight the form briefly
-            const formSection = document.querySelector('.input-section:nth-of-type(2)');
-            formSection.style.boxShadow = '0 0 20px rgba(102, 126, 234, 0.5)';
-            setTimeout(() => {
-                formSection.style.boxShadow = '';
-            }, 1000);
+            if (defaultBehavior === 'view') {
+                quickViewTransaction(index);
+            } else {
+                generateFromTransaction(index);
+            }
         }
         
         function generateSQL() {
