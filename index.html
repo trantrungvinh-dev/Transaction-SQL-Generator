@@ -365,6 +365,10 @@
                     💡 Copy kết quả từ query BƯỚC 1 và điền vào các ô bên dưới (hoặc chọn từ bảng trên)
                 </div>
                 
+                <div id="formStatusIndicator" class="hidden" style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px; border-radius: 5px; margin-bottom: 15px; color: #856404;">
+                    ⚠️ <strong>Thông tin đã điền nhưng chưa generate SQL.</strong> Click nút "Generate SQL Queries" bên dưới.
+                </div>
+                
                 <div class="form-row">
                     <div class="form-group">
                         <label for="audit_number">Audit Number *</label>
@@ -525,6 +529,37 @@
             }, 3000);
         }
         
+        // Reset/Clear all generated output and form
+        function resetOutput() {
+            // Hide output section
+            document.getElementById('outputSection').classList.add('hidden');
+            
+            // Clear all SQL blocks
+            document.getElementById('sql1').textContent = '';
+            document.getElementById('sql2').textContent = '';
+            document.getElementById('sql3').textContent = '';
+            document.getElementById('sql4').textContent = '';
+            document.getElementById('sql5').textContent = '';
+            document.getElementById('sql6').textContent = '';
+            document.getElementById('sql7').textContent = '';
+            
+            // Clear stats
+            document.getElementById('statAudit').textContent = '-';
+            document.getElementById('statType').textContent = '-';
+            document.getElementById('statAmount').textContent = '-';
+            document.getElementById('statAccount').textContent = '-';
+        }
+        
+        // Reset form inputs
+        function resetForm() {
+            document.getElementById('audit_number').value = '';
+            document.getElementById('voucher_no').value = '';
+            document.getElementById('acc_no_text').value = '';
+            document.getElementById('amount').value = '';
+            document.getElementById('approve_date').value = '';
+            document.getElementById('teller_id').value = '';
+        }
+        
         function loadPendingTransactions() {
             const data = document.getElementById('pendingData').value.trim();
             
@@ -532,6 +567,11 @@
                 showToast('Vui lòng paste dữ liệu giao dịch treo', 'error', '⚠️');
                 return;
             }
+            
+            // Reset everything before loading new data
+            resetOutput();
+            resetForm();
+            selectedRowIndex = -1; // Reset selection
             
             // Parse tab-separated data
             const lines = data.split('\n').filter(line => line.trim());
@@ -576,9 +616,11 @@
             if (pendingTransactions.length === 1) {
                 setTimeout(() => {
                     selectTransaction(0);
+                    showToast('Tự động chọn giao dịch duy nhất. Click "Generate" để tạo SQL!', 'success', '🎯');
                 }, 500);
             } else {
                 // Scroll to table if multiple transactions
+                showToast(`Có ${pendingTransactions.length} giao dịch. Vui lòng chọn giao dịch cần kiểm tra.`, 'success', '📋');
                 document.getElementById('pendingTable').scrollIntoView({ behavior: 'smooth' });
             }
         }
@@ -675,6 +717,12 @@
             // Re-render table to show highlight
             renderPendingTable();
             
+            // Hide any existing generated SQL (force user to regenerate)
+            if (document.getElementById('outputSection').classList.contains('hidden') === false) {
+                resetOutput();
+                showToast('Đã reset SQL cũ. Vui lòng click "Generate" để tạo SQL mới!', 'success', '🔄');
+            }
+            
             // Fill form with transaction data
             document.getElementById('audit_number').value = txn.audit_number;
             document.getElementById('voucher_no').value = txn.voucher_no;
@@ -700,6 +748,9 @@
             document.getElementById('approve_date').value = formattedDate;
             
             document.getElementById('teller_id').value = txn.teller_id;
+            
+            // Show form status indicator
+            document.getElementById('formStatusIndicator').classList.remove('hidden');
             
             showToast(`Đã chọn giao dịch: ${txn.audit_number}`, 'success', '✓');
             
@@ -867,6 +918,9 @@ WHERE identifier_key = '${auditNumber}';`;
             
             // Show output section
             document.getElementById('outputSection').classList.remove('hidden');
+            
+            // Hide form status indicator
+            document.getElementById('formStatusIndicator').classList.add('hidden');
             
             showToast('✓ SQL queries đã được generate thành công!', 'success', '🚀');
             
